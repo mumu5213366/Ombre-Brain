@@ -1,9 +1,8 @@
-import os, json, urllib.request
+import os, json, urllib.request, urllib.parse
 
 KEY = os.environ["DEEPSEEK_API_KEY"]
-BARK = os.environ["BARK_URL"]
+BARK = os.environ["BARK_URL"].rstrip("/")
 
-# 1. 让 DeepSeek 写一句问候
 req = urllib.request.Request(
     "https://api.deepseek.com/chat/completions",
     data=json.dumps({
@@ -18,11 +17,6 @@ req = urllib.request.Request(
 greeting = json.load(urllib.request.urlopen(req))["choices"][0]["message"]["content"].strip()
 print("生成：", greeting)
 
-# 2. 推到 Bark
-push = urllib.request.Request(
-    BARK,
-    data=json.dumps({"title": "早安", "body": greeting}).encode("utf-8"),
-    headers={"Content-Type": "application/json"}
-)
-urllib.request.urlopen(push)
+push_url = f"{BARK}/{urllib.parse.quote('早安')}/{urllib.parse.quote(greeting)}"
+urllib.request.urlopen(push_url)
 print("已推送")
