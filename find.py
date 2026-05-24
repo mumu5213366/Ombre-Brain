@@ -59,6 +59,14 @@ print(f"[{tag}] {title}\n{rec}\n{url}")
 
 # 推到 Bark：标题=分类+推荐语，正文=内容标题，点开跳链接
 body = f"{rec}\n\n📄 {title}\n{url}"
-push_url = f"{BARK}/{urllib.parse.quote(tag)}/{urllib.parse.quote(body)}"
-urllib.request.urlopen(push_url)
+push_req = urllib.request.Request(
+    BARK,
+    data=json.dumps({
+        "title": tag,
+        "body": f"{rec}\n\n📄 {title}",
+        "url": url
+    }).encode("utf-8"),
+    headers={"Content-Type": "application/json"}
+)
+urllib.request.urlopen(push_req)
 print("已推送")
