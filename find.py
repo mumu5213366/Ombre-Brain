@@ -58,7 +58,7 @@ rec = json.load(urllib.request.urlopen(req2))["choices"][0]["message"]["content"
 print(f"[{tag}] {title}\n{rec}\n{url}")
 
 # 推到 Bark：标题=分类+推荐语，正文=内容标题，点开跳链接
-body = f"{rec}\n\n📄 {title}"
-push_url = f"{BARK}/{urllib.parse.quote(tag)}/{urllib.parse.quote(body)}?url={urllib.parse.quote(url)}"
+body = f"{rec}\n\n📄 {title}\n{url}"
+push_url = f"{BARK}/{urllib.parse.quote(tag)}/{urllib.parse.quote(body)}"
 urllib.request.urlopen(push_url)
 print("已推送")
