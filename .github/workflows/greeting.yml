@@ -2,7 +2,11 @@ name: greeting
 
 on:
   schedule:
-    - cron: '0 23 * * *'
+    - cron: '30 23 * * *'   # 北京约 7:30  早安
+    - cron: '30 4 * * *'    # 北京约 12:30 午饭
+    - cron: '30 7 * * *'    # 北京约 15:30 下午
+    - cron: '30 11 * * *'   # 北京约 19:30 傍晚
+    - cron: '30 14 * * *'   # 北京约 22:30 晚安
   workflow_dispatch:
 
 jobs:
@@ -13,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: 推送早安
+      - name: 推送
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           BARK_URL: ${{ secrets.BARK_URL }}
