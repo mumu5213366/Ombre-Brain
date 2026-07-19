@@ -211,6 +211,19 @@ ERROR_CODES: dict[str, ErrorSpec] = {
             "用 trace(bucket_id, pinned=0) 取消，再来钉这条。"
         ),
     ),
+    "OB-I003": ErrorSpec(
+        code="OB-I003",
+        level="I",
+        title_zh="核心记忆已自动新陈代谢（importance≥9 配额置换）",
+        title_en="core memory auto-metabolized (≥9 quota swap)",
+        suggestion_zh=(
+            "★ 这是 OB 自作主张帮你做的事 ★\n"
+            "importance≥9 已满员，OB 把最久未激活的一条老核心降为 8，"
+            "为本条新核心让位（pinned 铁律桶永不参与置换）。\n"
+            "被降级的桶在消息正文中已注明；若不认可，用 trace 把它升回 9、"
+            "并手动挑另一条降级即可。"
+        ),
+    ),
 }
 
 # ============================================================
@@ -517,19 +530,7 @@ class OBStartupError(SystemExit):
     def __init__(self, code: str, detail: str = "", *, extra: dict | None = None):
         self.error_code = code
         self.detail = detail
-        self.extra = extra or {    "OB-I003": ErrorSpec(
-        code="OB-I003",
-        level="I",
-        title_zh="核心记忆已自动新陈代谢（importance≥9 配额置换）",
-        title_en="core memory auto-metabolized (≥9 quota swap)",
-        suggestion_zh=(
-            "★ 这是 OB 自作主张帮你做的事 ★\n"
-            "importance≥9 已满员，OB 把最久未激活的一条老核心降为 8，"
-            "为本条新核心让位（pinned 铁律桶永不参与置换）。\n"
-            "被降级的桶在消息正文中已注明；若不认可，用 trace 把它升回 9、"
-            "并手动挑另一条降级即可。"
-        ),
-    ),
+        self.extra = extra or {
 }
         # SystemExit 的 message 即终端最终输出
         msg = format_error(code, detail, extra=extra, include_logs=True)
