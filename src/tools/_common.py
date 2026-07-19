@@ -470,6 +470,40 @@ async def count_high_importance() -> int:
         return 0
 
 
+
+
+async def _find_metabolism_victim() -> dict | None:
+    """新陈代谢：从现有 importance≥9 的桶里挑「最弱」的一条让位。
+
+    候选 = 非 pinned/protected/letter 且 importance≥9；
+    排序 = activation_count 升序 → last_active 升序
+    （最少被想起、最久没被想起的排最前）。
+    失败或无候选时返回 None（调用方回退旧的降级逻辑）。"""
+    try:
+        all_b = await rt.bucket_mgr.list_all(include_archive=False)
+        cands = [
+            b for b in all_b
+            if int(b.get("metadata", {}).get("importance") or 0) >= _HIGH_IMP_THRESHOLD
+            and not b.get("metadata", {}).get("pinned")
+            and not b.get("metadata", {}).get("protected")
+            and b.get("metadata", {}).get("type") != "letter"
+        ]
+        if not cands:
+            return None
+
+        def _key(b):
+            m = b.get("metadata", {})
+            return (
+                int(m.get("activation_count") or 0),
+                str(m.get("last_active") or m.get("created_at") or ""),
+            )
+
+        cands.sort(key=_key)
+        return cands[0]
+    except Exception as e:
+        rt.logger.warning(f"_find_metabolism_victim failed: {e}")
+        return None
+
 async def enforce_high_importance_quota(importance: int) -> int:
     """importance≥9 配额检查 + 自动降级。
 
@@ -481,6 +515,25 @@ async def enforce_high_importance_quota(importance: int) -> int:
         return importance
     cur = await count_high_importance()
     if cur >= _HIGH_IMP_HARD_CAP:
+        # iter：自动新陈代谢——先尝试给最弱的老桶降级让位，失败才降级新桶
+        victim = await _find_metabolism_victim()
+        if victim is not None:
+            try:
+                await rt.bucket_mgr.update(victim["id"], importance=_HIGH_IMP_DEGRADE_TO)
+                vname = victim.get("metadata", {}).get("name") or victim["id"]
+                rt.logger.info(
+                    f"op=quota phase=branch branch=imp_metabolism requested={importance} "
+                    f"current={cur} cap={_HIGH_IMP_HARD_CAP} victim={victim['id']}"
+                )
+                _push_warning_safe(
+                    "OB-I003",
+                    f"核心配额已满（{cur}/{_HIGH_IMP_HARD_CAP}），已自动把最久未激活的"
+                    f"桶 {victim['id']}「{vname}」降为 {_HIGH_IMP_DEGRADE_TO}，"
+                    f"本条按 importance={importance} 保留",
+                )
+                return importance
+            except Exception as e:
+                rt.logger.warning(f"imp metabolism failed, fallback to degrade: {e}")
         rt.logger.info(
             f"op=quota phase=branch branch=imp_degrade requested={importance} "
             f"current={cur} cap={_HIGH_IMP_HARD_CAP} degraded_to={_HIGH_IMP_DEGRADE_TO}"
