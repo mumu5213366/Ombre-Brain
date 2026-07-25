@@ -777,7 +777,7 @@ async def _merge_or_create_inner(
     embed_warn = ""
     embedding_state = "disabled"
     outbox = getattr(rt.bucket_mgr, "embedding_outbox", None)
-      if outbox is not None:
+  if outbox is not None:
         # outbox 存在即由它兜底重试（含熔断与退避），此处不再同步判定失败。
         # 历史 bug：meaning 路径会先 upsert 一行 embedding='' 的占位，
         # 导致正文向量尚在队列时被 get_embedding() 误判为 missing。
