@@ -42,7 +42,8 @@ import uuid
 from . import _runtime as rt
 
 _EMBED_WARN = (
-    "向量化失败，该桶不参与语义检索，仅支持关键词匹配。请检查 OMBRE_EMBED_API_KEY。"
+    "向量索引尚未就绪，本桶暂时只走关键词检索，后台会自动重试补建。"
+    "若持续数分钟仍无法语义召回，再查 errors 面板的 OB-E001 详情。"
 )
 
 # ============================================================
@@ -776,8 +777,11 @@ async def _merge_or_create_inner(
     embed_warn = ""
     embedding_state = "disabled"
     outbox = getattr(rt.bucket_mgr, "embedding_outbox", None)
-    if outbox is not None and outbox.is_pending(bucket_id):
-        embedding_state = "queued"
+   if outbox is not None:
+        # outbox 存在即由它兜底重试（含熔断与退避），此处不再同步判定失败。
+        # 历史 bug：meaning 路径会先 upsert 一行 embedding='' 的占位，
+        # 导致正文向量尚在队列时被 get_embedding() 误判为 missing。
+        embedding_state = "queued" if outbox.is_pending(bucket_id) else "indexed"
     elif rt.embedding_engine and getattr(rt.embedding_engine, "enabled", False):
         try:
             existing = await rt.embedding_engine.get_embedding(bucket_id)
